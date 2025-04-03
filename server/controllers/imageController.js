@@ -4,10 +4,12 @@ const Image = require('../models/imageModel');
 
 exports.uploadImage = async (req, res) => {
   try {
+    // Check if a file is uploaded
     if (!req.file) {
       return res.status(400).json({ message: 'No image uploaded' });
     }
 
+    // Parse tags from the request body
     let tags = [];
     if (req.body.tags) {
       try {
@@ -17,55 +19,28 @@ exports.uploadImage = async (req, res) => {
       }
     }
 
+    // Upload the image to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path);
-    
-    exports.uploadImage = async (req, res) => {
-      try {
-        if (!req.file) {
-          return res.status(400).json({ message: 'No image uploaded' });
-        }
-    
-        let tags = [];
-        if (req.body.tags) {
-          try {
-            tags = JSON.parse(req.body.tags);
-          } catch (err) {
-            tags = req.body.tags.split(',').map(tag => tag.trim());
-          }
-        }
-    
-        const result = await cloudinary.uploader.upload(req.file.path);
-    
-        // Save the image metadata to MongoDB
-        const newImage = await Image.create({
-          title: req.body.title,
-          imageUrl: result.secure_url,
-          cloudinaryId: result.public_id,
-          tags: tags,
-        });
-        console.log('Image saved to MongoDB:', newImage);
-    
-        fs.unlinkSync(req.file.path);
-    
-        res.status(201).json(newImage);
-      } catch (error) {
-        console.error(error);
-    
-        if (req.file && req.file.path) {
-          try {
-            fs.unlinkSync(req.file.path);
-          } catch (unlinkError) {
-            console.error('Error deleting temporary file:', unlinkError);
-          }
-        }
-    
-        res.status(500).json({ message: 'Server error during upload' });
-      }
-    };
-    
+
+    // Save the image metadata to MongoDB
+    const newImage = await Image.create({
+      title: req.body.title,
+      imageUrl: result.secure_url,
+      cloudinaryId: result.public_id,
+      tags: tags,
+    });
+
+    console.log('Image saved to MongoDB:', newImage);
+
+    // Delete the file from the local uploads folder
+    fs.unlinkSync(req.file.path);
+
+    // Send the saved image as the response
+    res.status(201).json(newImage);
   } catch (error) {
-    console.error(error);
-    
+    console.error('Error during image upload:', error);
+
+    // Clean up the uploaded file if an error occurs
     if (req.file && req.file.path) {
       try {
         fs.unlinkSync(req.file.path);
@@ -73,7 +48,7 @@ exports.uploadImage = async (req, res) => {
         console.error('Error deleting temporary file:', unlinkError);
       }
     }
-    
+
     res.status(500).json({ message: 'Server error during upload' });
   }
 };
