@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import axios from 'axios';
 
 function ImageUpload({ onImageUpload }) {
@@ -7,6 +7,7 @@ function ImageUpload({ onImageUpload }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,7 +21,6 @@ function ImageUpload({ onImageUpload }) {
     formData.append('image', file);
     formData.append('title', title);
     
-    // Convert comma-separated tags to array
     const tagArray = tags.split(',').map(tag => tag.trim());
     formData.append('tags', JSON.stringify(tagArray));
     
@@ -34,16 +34,23 @@ function ImageUpload({ onImageUpload }) {
         }
       });
       
-      // Reset form
       setTitle('');
       setTags('');
       setFile(null);
       
-      // Notify parent component
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
       onImageUpload();
     } catch (error) {
-      setError('Error uploading image: ' + error.message);
+      setError('Error uploading image: ' + (error.response?.data?.message || error.message));
       console.error('Error:', error);
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setFile(null);
     } finally {
       setLoading(false);
     }
@@ -84,6 +91,7 @@ function ImageUpload({ onImageUpload }) {
           <input
             type="file"
             id="image"
+            ref={fileInputRef} 
             accept="image/*"
             onChange={(e) => setFile(e.target.files[0])}
             required
