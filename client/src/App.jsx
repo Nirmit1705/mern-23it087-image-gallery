@@ -7,53 +7,51 @@ import './App.css';
 
 function App() {
   const [images, setImages] = useState([]);
-  const [filteredImages, setFilteredImages] = useState([]);
+  const [filteredImgs, setFilteredImgs] = useState([]);
   const [selectedTag, setSelectedTag] = useState('');
   const [tags, setTags] = useState([]);
 
-  // Fetch all images on component mount
   useEffect(() => {
-    fetchImages();
+    fetchImg();
   }, []);
 
-  // Extract unique tags from images
   useEffect(() => {
     if (images.length > 0) {
       const uniqueTags = [...new Set(images.flatMap(image => image.tags))];
       setTags(uniqueTags);
     }
-    
-    // Apply filter when images or selectedTag changes
+
     if (selectedTag) {
-      setFilteredImages(images.filter(image => 
+      setFilteredImgs(images.filter(image => 
         image.tags.includes(selectedTag)
       ));
     } else {
-      setFilteredImages(images);
+      setFilteredImgs(images);
     }
   }, [images, selectedTag]);
 
-  const fetchImages = async () => {
+  const fetchImg = async (tag = '') => {
     try {
-      const response = await axios.get('http://localhost:5000/api/images');
+      const url = tag ? `http://localhost:5000/api/images?tag=${tag}` : 'http://localhost:5000/api/images';
+      const response = await axios.get(url);
       setImages(response.data);
     } catch (error) {
       console.error('Error fetching images:', error);
     }
   };
 
-  const handleImageUpload = () => {
-    fetchImages(); // Refresh images after upload
+  const handleImgUpld = () => {
+    fetchImg(); 
   };
 
-  const handleTagFilter = (tag) => {
+  const handleFilter = (tag) => {
     setSelectedTag(tag);
   };
 
-  const handleDeleteImage = async (id) => {
+  const handleDlt = async (id) => {
     try {
       await axios.delete(`http://localhost:5000/api/images/${id}`);
-      fetchImages(); // Refresh after delete
+      fetchImg();
     } catch (error) {
       console.error('Error deleting image:', error);
     }
@@ -63,17 +61,17 @@ function App() {
     <div className="app-container">
       <h1>Image Gallery</h1>
       
-      <ImageUpload onImageUpload={handleImageUpload} />
+      <ImageUpload onImageUpload={handleImgUpld} />
       
       <TagFilter 
         tags={tags} 
         selectedTag={selectedTag} 
-        onSelectTag={handleTagFilter} 
+        onSelectTag={handleFilter} 
       />
       
       <ImageGallery 
-        images={filteredImages} 
-        onDelete={handleDeleteImage} 
+        images={filteredImgs} 
+        onDelete={handleDlt} 
       />
     </div>
   );

@@ -4,7 +4,6 @@ const Image = require('../models/imageModel');
 
 exports.uploadImage = async (req, res) => {
   try {
-    // Check for file
     if (!req.file) {
       return res.status(400).json({ message: 'No image uploaded' });
     }
@@ -20,22 +19,53 @@ exports.uploadImage = async (req, res) => {
 
     const result = await cloudinary.uploader.upload(req.file.path);
     
-    const image = new Image({
-      title: req.body.title,
-      imageUrl: result.secure_url,
-      cloudinaryId: result.public_id,
-      tags: tags
-    });
-
-    await image.save();
-
-    fs.unlinkSync(req.file.path);
-
-    res.status(201).json(image);
+    exports.uploadImage = async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: 'No image uploaded' });
+        }
+    
+        let tags = [];
+        if (req.body.tags) {
+          try {
+            tags = JSON.parse(req.body.tags);
+          } catch (err) {
+            tags = req.body.tags.split(',').map(tag => tag.trim());
+          }
+        }
+    
+        const result = await cloudinary.uploader.upload(req.file.path);
+    
+        // Save the image metadata to MongoDB
+        const newImage = await Image.create({
+          title: req.body.title,
+          imageUrl: result.secure_url,
+          cloudinaryId: result.public_id,
+          tags: tags,
+        });
+        console.log('Image saved to MongoDB:', newImage);
+    
+        fs.unlinkSync(req.file.path);
+    
+        res.status(201).json(newImage);
+      } catch (error) {
+        console.error(error);
+    
+        if (req.file && req.file.path) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch (unlinkError) {
+            console.error('Error deleting temporary file:', unlinkError);
+          }
+        }
+    
+        res.status(500).json({ message: 'Server error during upload' });
+      }
+    };
+    
   } catch (error) {
     console.error(error);
     
-    // Clean up the uploaded file if it exists and there was an error
     if (req.file && req.file.path) {
       try {
         fs.unlinkSync(req.file.path);
