@@ -4,6 +4,7 @@ const Image = require('../models/imageModel');
 
 exports.uploadImage = async (req, res) => {
   try {
+    // Check for file
     if (!req.file) {
       return res.status(400).json({ message: 'No image uploaded' });
     }
@@ -33,7 +34,17 @@ exports.uploadImage = async (req, res) => {
     res.status(201).json(image);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    
+    // Clean up the uploaded file if it exists and there was an error
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error('Error deleting temporary file:', unlinkError);
+      }
+    }
+    
+    res.status(500).json({ message: 'Server error during upload' });
   }
 };
 
